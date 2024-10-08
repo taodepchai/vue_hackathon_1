@@ -8,16 +8,17 @@
       v-model="searchQuery"
       placeholder="Search email"
       @input="searchEmployee"
+      ref="searchInput"
     />
     <table>
       <thead>
         <tr>
           <th>STT</th>
-          <th>full name</th>
-          <th>gender</th>
-          <th>date of birth</th>
-          <th>email</th>
-          <th>option</th>
+          <th>Full name</th>
+          <th>Gender</th>
+          <th>Date of Birth</th>
+          <th>Email</th>
+          <th>Option</th>
         </tr>
       </thead>
       <tbody>
@@ -32,14 +33,14 @@
               style="background-color: orange"
               @click="openModal('edit', index)"
             >
-              edit
+              Edit
             </button>
             <button
               style="background-color: red"
               id="delete"
               @click="deleteEmployee(index)"
             >
-              delete
+              Delete
             </button>
           </td>
         </tr>
@@ -48,13 +49,13 @@
 
     <div v-if="showModal" class="modal-overlay">
       <div class="modal-content">
-        <h3>{{ isEditing ? "edit user" : "add user" }}</h3>
+        <h3>{{ isEditing ? "Edit user" : "Add user" }}</h3>
         <form @submit.prevent="saveEmployee">
           <label for="name">Name</label>
           <input
             id="name"
             v-model="employeeForm.name"
-            placeholder="fullname"
+            placeholder="Full name"
             required
           />
 
@@ -117,6 +118,7 @@
 import { ref, computed, onMounted } from "vue";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+
 const employees = ref([]);
 const employeeForm = ref({
   name: "",
@@ -128,7 +130,7 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentIndex = ref(null);
 const searchQuery = ref("");
-
+const searchInput = ref(null);
 const loadEmployees = () => {
   const storedEmployees = JSON.parse(localStorage.getItem("employees")) || [];
   employees.value = storedEmployees;
@@ -139,6 +141,34 @@ const saveEmployees = () => {
 };
 
 const saveEmployee = () => {
+  const today = new Date();
+  const dob = new Date(employeeForm.value.dob);
+
+  if (dob > today) {
+    Swal.fire({
+      icon: "error",
+      title: "Invalid Date of Birth",
+      text: "The date of birth cannot be later than today.",
+    });
+    return;
+  }
+
+  const emailExists = employees.value.some((employee, index) => {
+    return (
+      employee.email === employeeForm.value.email &&
+      index !== currentIndex.value
+    );
+  });
+
+  if (emailExists) {
+    Swal.fire({
+      icon: "error",
+      title: "Duplicate Email",
+      text: "The email is already in use. Please use a different email.",
+    });
+    return;
+  }
+
   if (isEditing.value) {
     employees.value[currentIndex.value] = { ...employeeForm.value };
   } else {
@@ -196,6 +226,7 @@ const resetForm = () => {
 };
 
 onMounted(() => {
+  searchInput.value.focus();
   loadEmployees();
 });
 </script>
@@ -239,16 +270,19 @@ onMounted(() => {
   padding: 8px;
   margin-bottom: 10px;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
 }
+
 th,
 td {
   border: 1px solid #ddd;
   padding: 8px;
 }
+
 th {
   background-color: #f2f2f2;
   font-weight: bold;
@@ -261,12 +295,6 @@ button {
   border: none;
   border-radius: 5px;
   color: white;
-}
-.active {
-  color: green;
-}
-.inactive {
-  color: red;
 }
 
 input {
